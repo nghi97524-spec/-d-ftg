@@ -1,0 +1,58 @@
+local player = game.Players.LocalPlayer
+local character = player.Character or player.CharacterAdded:Wait()
+
+-- Função para encontrar e interagir com pets/slots
+local function getPets()
+    local pets = {}
+    -- Percorre o Workspace/Players procurando por objetos relacionados a pets
+    for _, obj in ipairs(workspace:GetDescendants()) do
+        if obj:IsA("Tool") or obj:IsA("Model") then
+            local nome = obj.Name:lower()
+            if nome:find("pet") or nome:find("animal") or nome:find("companion") then
+                table.insert(pets, obj)
+            end
+        end
+    end
+    return pets
+end
+
+-- Spam de ativação/uso de pets
+local function spamPets(interval, duration)
+    local endTime = tick() + (duration or 30)
+    
+    while tick() < endTime do
+        local pets = getPets()
+        
+        for _, pet in ipairs(pets) do
+            pcall(function()
+                -- Tenta equipar
+                if pet:IsA("Tool") then
+                    pet.Parent = player.Backpack
+                    wait(0.1)
+                    player.Character.Humanoid:EquipTool(pet)
+                end
+                
+                -- Tenta ativar (fire-click, fire-server, etc)
+                local args = {[1] = pet, [2] = "Activate"}
+                game:GetService("ReplicatedStorage"):FindFirstChild("PetEvent"):FireServer(unpack(args))
+                
+                -- Tenta remote-spam genérico
+                for _, remote in ipairs(game:GetService("ReplicatedStorage"):GetDescendants()) do
+                    if remote:IsA("RemoteEvent") or remote:IsA("RemoteFunction") then
+                        local nome = remote.Name:lower()
+                        if nome:find("pet") or nome:find("spawn") or nome:find("use") then
+                            pcall(function()
+                                remote:FireServer({["Pet"] = pet, ["Action"] = "Spawn"})
+                            end)
+                        end
+                    end
+                end
+            end)
+        end
+        
+        wait(interval or 0.5)
+    end
+end
+
+-- Executa spam: intervalo 0.3s por 60 segundos
+spamPets(0.3, 60)
